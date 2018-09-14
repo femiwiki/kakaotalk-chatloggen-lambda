@@ -1,59 +1,40 @@
-var ApiBuilder = require('claudia-api-builder');
-var urlresolve = require('url');
-var html2dom = require('./html2dom');
-
-var api = new ApiBuilder();
-module.exports = api;
-
 const rp = require('request-promise-native');
+const ApiBuilder = require('claudia-api-builder');
+const { resolve } = require('url');
+const jsdom = require('jsdom');
+
 const DEFAULT_PROFILE_URL = 'https://femiwiki.com/fw-resources/kakaotalk/profile_anonymous.png';
 
-api.get(
-  'kakaotalk',
-  function (request) {
-    var url = request.queryString.url;
-    return rp(url).then(html2dom).then(function(doc) {
-      var tableEls = doc.querySelectorAll('.wikitable');
-      var talkTableEl = tableEls[0];
-      var participantsTableEl = tableEls[1];
-      var rows = table2array(talkTableEl, {});
-      var participants = table2array(
-        participantsTableEl,
-        {'이미지': function(el) {return urlresolve.resolve(url, el.querySelector('img').src);}}
-      );
-      var participantsMap = {};
-      for(var i = 0; i < participants.length; i++) {
-        var p = participants[i];
-        participantsMap[p['대화명']] = p;
-      }
-      var html = render(rows, participantsMap);
-      return html;
+function handler(request) {
+  var URL = request.queryString.url;
+  return rp(URL).then(html2dom).then(function(doc) {
+    var tableEls = doc.querySelectorAll('.wikitable');
+    var talkTableEl = tableEls[0];
+    var participantsTableEl = tableEls[1];
+    var rows = table2array(talkTableEl, {});
+    var participants = table2array(
+      participantsTableEl,
+      {'이미지': function(el) {return resolve(URL, el.querySelector('img').src);}}
+    );
+    var participantsMap = {};
+    for(var i = 0; i < participants.length; i++) {
+      var p = participants[i];
+      participantsMap[p['대화명']] = p;
+    }
+    var html = render(rows, participantsMap);
+    return html;
+  });
+}
+
+
+function html2dom(html) {
+  return new Promise(function(resolve, reject) {
+    jsdom.env(html, function(err, window) {
+      resolve(window.document);
     });
-  },
-  {success: {contentType: 'text/html'}}
-);
+  });
+}
 
-
-/*
-var url = 'https://femiwiki.com/w/%EC%82%AC%EC%9A%A9%EC%9E%90:%ED%83%95%EC%88%98%EC%9C%A1/%EC%B9%B4%ED%86%A1_%EC%98%88%EC%8B%9C';
-rp(url).then(html2dom).then(function(doc) {
-  var tableEls = doc.querySelectorAll('.wikitable');
-  var talkTableEl = tableEls[0];
-  var participantsTableEl = tableEls[1];
-  var rows = table2array(talkTableEl, {});
-  var participants = table2array(
-    participantsTableEl,
-    {'이미지': function(el) {return urlresolve.resolve(url, el.querySelector('img').src);}}
-  );
-  var participantsMap = {};
-  for(var i = 0; i < participants.length; i++) {
-    var p = participants[i];
-    participantsMap[p['대화명']] = p;
-  }
-  var html = render(rows, participantsMap);
-  console.log(html);
-});
-*/
 
 function table2array(tableEl, accessors) {
   if(!tableEl) return [];
@@ -115,26 +96,30 @@ function render(rows, participantsMap) {
 
 
 function render_notification(row) {
-    return '<li class="notification">' + row['알림'] + '</li>';
+  return '<li class="notification">' + row['알림'] + '</li>';
 }
 
 
 function render_talk(row, prevSender, participant) {
-    var continued = prevSender === row['대화명'];
-    var message = '<span class="message">' + row['메시지'] + '</span>';
-    var info =
-      '<span class="info">' +
-      '  <span class="read">' + row['읽음표시'] + '</span>' +
-      '  <span class="time">' + row['시간'] + '</span>' +
-      '</span>';
+  var continued = prevSender === row['대화명'];
+  var message = '<span class="message">' + row['메시지'] + '</span>';
+  var info =
+    '<span class="info">' +
+    '  <span class="read">' + row['읽음표시'] + '</span>' +
+    '  <span class="time">' + row['시간'] + '</span>' +
+    '</span>';
 
-    var profileUrl = participant['이미지'] || DEFAULT_PROFILE_URL;
-    return (
-      '<li class="talk sender-' + row['대화명'] + ' ' + (continued ? 'continued' : '') + '">' +
-      '<span class="profile"><img src="' + profileUrl + '"></span>' +
-      '<span class="sender">' + row['대화명'] + '</span>' +
-      (row['대화명'] === '나' ? info + message : message + info) +
-      '</li>'
-    );
+  var profileUrl = participant['이미지'] || DEFAULT_PROFILE_URL;
+  return (
+    '<li class="talk sender-' + row['대화명'] + ' ' + (continued ? 'continued' : '') + '">' +
+    '<span class="profile"><img src="' + profileUrl + '"></span>' +
+    '<span class="sender">' + row['대화명'] + '</span>' +
+    (row['대화명'] === '나' ? info + message : message + info) +
+    '</li>'
+  );
 }
 
+
+var api = new ApiBuilder();
+module.exports = api;
+api.get('kakaotalk', handler, { success: { contentType: 'text/html' } });
