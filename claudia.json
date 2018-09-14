@@ -1,0 +1,11 @@
+{
+  "lambda": {
+    "role": "fw-kakaotalk-lambda-executor",
+    "name": "fw-kakaotalk-lambda",
+    "region": "ap-northeast-2"
+  },
+  "api": {
+    "id": "m2mok75x0k",
+    "module": "app"
+  }
+}
