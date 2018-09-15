@@ -1,0 +1,4 @@
+#!/bin/bash
+<<'END' node > a.html && b2sum a.html && open a.html && rm a.html
+require('./core')('https://femiwiki.com/w/%ED%8B%80:%EC%B9%B4%EC%B9%B4%EC%98%A4%ED%86%A1').then(console.log)
+END

@@ -8,7 +8,6 @@
   "dependencies": {
     "claudia-api-builder": "^4.1.1",
     "jsdom": "^9.8.3",
-    "request": "^2.79.0",
-    "request-promise-native": "^1.0.3"
+    "node-fetch": "^2.2.0"
   }
 }
