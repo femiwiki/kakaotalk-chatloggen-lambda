@@ -1,14 +1,21 @@
-kakaotalk-lambda
+*__DISCLAIMER__: Femiwiki does not service the kakaotalk-chatloggen-lambda API anymore.*
+
+&nbsp;
+
+kakaotalk-chatloggen-lambda
 ========
+Simple KakaoTalk chatting log page generator. See
+[틀:카카오톡](https://femiwiki.com/index.php?oldid=124894) page for the further
+details.
 
-### TODO
-- [ ] 작동하게 만들기
-- [ ] https://femiwiki.com/fw-resources/kakaotalk/kakaotalk.css 뭐임?
-
-### Instructions
-```
+```sh
+# Install dependencies
 yarn
+
+# Test
 ./test
+
+# Deploy
 yarn claudia create --region ap-northeast-2 --api-module app
 yarn claudia update
 ```
