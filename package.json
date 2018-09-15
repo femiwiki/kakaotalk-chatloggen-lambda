@@ -1,7 +1,6 @@
 {
   "name": "fw-kakaotalk-chatloggen-lambda",
   "version": "0.0.0",
-  "main": "app.js",
   "devDependencies": {
     "claudia": "^5.1.1"
   },
