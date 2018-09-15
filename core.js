@@ -1,6 +1,18 @@
-const fetch = require('node-fetch')
+const fs = require('fs')
 const { resolve } = require('url')
+const fetch = require('node-fetch')
 const jsdom = require('jsdom')
+const { Encoder } = require('b64')
+
+const defaultPhotoPromise = new Promise((resolve, reject) => {
+  const buffers = []
+
+  fs.createReadStream('default-photo.png')
+  .pipe(new Encoder())
+  .on('data', buffer => buffers.push(buffer))
+  .on('end', _ => resolve(Buffer.concat(buffers).toString()))
+  .on('error', reject)
+})
 
 const DEFAULT_PROFILE_URL = 'https://femiwiki.com/fw-resources/kakaotalk/profile_anonymous.png'
 
@@ -21,7 +33,7 @@ module.exports = async URL => {
     participantsMap[p['대화명']] = p
   }
 
-  return render(rows, participantsMap)
+  return await render(rows, participantsMap)
 }
 
 
@@ -58,14 +70,132 @@ function table2array(tableEl, accessors) {
   return objs
 }
 
-function render(rows, participantsMap) {
+async function render(rows, participantsMap, defaultPhoto) {
   let result = `\
 <!DOCTYPE html>
 <html>
   <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://femiwiki.com/fw-resources/kakaotalk/kakaotalk.css">
+  <style>
+  html {
+    font-size: 16px;
+    font-family: 'Apple SD Gothic Neo','Noto Sans CJK KR','본고딕','KoPubDotum Medium','나눔바른고딕','나눔고딕',NanumGothic,'맑은고딕','Malgun Gothic',Arial,Dotum,sans-serif;
+  }
+
+  body {
+    margin: 0;
+    height: 100%;
+    background-color: #9bbad8;
+  }
+
+  .kakaotalk {
+    height: 100%;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+  }
+
+  .talk {
+    position: relative;
+    margin: 1.2rem 0 0.4rem;
+  }
+
+  .talk.continued {
+    margin-top: 0.4rem;
+  }
+
+  .notification {
+    text-align: center;
+    color: #333;
+    background-color: rgba(0, 0, 0, 0.15);
+    padding: 0.2rem 1rem;
+    margin: 2rem 0;
+    font-size: 0.8rem;
+  }
+
+  .talk .sender {
+    display: block;
+    padding: 0.2rem 0.1rem;
+    font-size: 0.8rem;
+  }
+
+  .talk .profile {
+    float: left;
+    margin-right: 0.5rem;
+  }
+  .talk .profile > * {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 1.2rem;
+  }
+  .talk .profile > div {
+    background-image: url(data:image/png;base64,${await defaultPhotoPromise});
+    background-size: cover;
+  }
+
+  .talk .info {
+    display: inline-block;
+    position: relative;
+    width: 3.5rem;
+    height: 1rem;
+    margin: 0 0.4rem;
+    bottom: 0;
+    color: #666;
+  }
+
+  .talk .time {
+    display: block;
+    position: absolute;
+    top: 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .talk .read {
+    display: block;
+    position: absolute;
+    top: 0;
+    font-size: 0.8rem;
+    color: #fae904;
+  }
+
+  .talk .message {
+    display: inline-block;
+    padding: 0.5rem;
+    background-color: #FFF;
+    border-radius: 3px;
+    max-width: calc(100% - 10rem);
+  }
+
+  .talk.sender-나 {
+    text-align: right;
+  }
+
+  .talk.sender-나 .message {
+    background-color: #fae904;
+  }
+
+  .talk.sender-나 .info .time,
+  .talk.sender-나 .info .read {
+    right: 0;
+  }
+
+  .talk.continued .sender,
+  .talk.continued .profile img,
+  .talk.sender-나 .profile,
+  .talk.sender-나 .sender {
+    display: none;
+  }
+  </style>
 </head>
 <body>
 
@@ -98,7 +228,7 @@ function render_talk(row, prevSender, participant) {
 
   const check = row['읽음표시']
   const time = row['시간']
-  const profileUrl = participant['이미지'] || DEFAULT_PROFILE_URL
+  const image = participant['이미지']
   const message = row['메시지']
   const name = row['대화명']
   const is_continued = prevSender === name ? ' continued' : ''
@@ -111,13 +241,14 @@ function render_talk(row, prevSender, participant) {
 </span>
 `
   const html_message = `<span class="message">${message}</span>`
-  const html_talk = is_me ? html_info + html_message : html_message + html_info
 
   return `\
 <li class="talk sender-${name}${is_continued}">
-  <span class="profile"><img src="${profileUrl}"></span>
+  <span class="profile">${
+    image ? `<img src="${image}">` : `<div></div>`
+  }</span>
   <span class="sender">${name}</span>
-  ${html_talk}
+  ${ is_me ? html_info + html_message : html_message + html_info }
 </li>
 `
 }
